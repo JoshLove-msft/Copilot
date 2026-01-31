@@ -76,28 +76,24 @@ public class CopilotService : IAsyncDisposable
             3. FromCancellationToken replacement:
                - Replace `RequestContext context = FromCancellationToken(cancellationToken);`
                - With `RequestContext context = cancellationToken.ToRequestContext();`
-
-            4. _serializedAdditionalRawData replacement:
-               - Replace `_serializedAdditionalRawData` with `_serializedAdditionalBinaryData`
-               - Also replace parameter names `serializedAdditionalRawData` with `serializedAdditionalBinaryData`
-
-            5. Remove Autorest.CSharp.Core using:
-               - Delete any line containing `using Autorest.CSharp.Core;`
-
-            6. _pipeline to Pipeline replacement:
-               - Replace `_pipeline` with `Pipeline`
-               
-            7. Mismatched factory method type names:
+                
+            4. Mismatched factory method type names:
                - If there is a custom type ending in ModelFactory that has a different name than the 
                  generated type ending in ModelFactory, update the CodeGenType attribute in the custom type to match the generated type name. 
 
-            8. Mismatched ClientBuilderExtensions type names. 
+            5. Mismatched ClientBuilderExtensions type names. 
                 - If there is a custom type ending in ClientBuilderExtensions that has a different name than the 
                   generated type ending in ClientBuilderExtensions, update the CodeGenType attribute in the custom type to match the generated type name.
             
-            9. Fetch methods in custom LRO methods:
+            6. Fetch methods in custom LRO methods:
                 - In the new generator, the Fetch methods are replaced by static methods called FromLroResponse on the Response models.
                 - Update custom LRO methods to use ResponseModel.FromLroResponse(response) instead of calling Fetch methods.
+                - Do NOT create Fetch methods manually - call the generated FromLroResponse method.
+                
+            7. FromResponse method removal:    
+                - The FromResponse methods have been removed from models.
+                - Instead, use the explicit cast from Response to the model type.
+                - Example: `var model = ModelType.FromResponse(response);` becomes `var model = (ModelType)response;`
             The project is located at: {_projectPath}
 
             When fixing errors:

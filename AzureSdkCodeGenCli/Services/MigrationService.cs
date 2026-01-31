@@ -114,6 +114,54 @@ public partial class MigrationService
                 return new MigrationResult(false, completedSteps, warnings, codegenResult.Error);
             }
 
+            // Step 5.5: Replace _pipeline with Pipeline
+            Console.WriteLine("Step 5.5: Replacing _pipeline with Pipeline...");
+            var pipelineResult = await ReplacePipelineFieldAsync();
+            if (pipelineResult.Success)
+            {
+                completedSteps.Add($"Replaced _pipeline with Pipeline ({pipelineResult.FilesChanged} files)");
+            }
+            else if (pipelineResult.Warning != null)
+            {
+                warnings.Add(pipelineResult.Warning);
+            }
+            else
+            {
+                return new MigrationResult(false, completedSteps, warnings, pipelineResult.Error);
+            }
+
+            // Step 5.6: Remove Autorest.CSharp.Core using statements
+            Console.WriteLine("Step 5.6: Removing Autorest.CSharp.Core using statements...");
+            var autorestResult = await RemoveAutorestCSharpCoreUsingAsync();
+            if (autorestResult.Success)
+            {
+                completedSteps.Add($"Removed Autorest.CSharp.Core using statements ({autorestResult.FilesChanged} files)");
+            }
+            else if (autorestResult.Warning != null)
+            {
+                warnings.Add(autorestResult.Warning);
+            }
+            else
+            {
+                return new MigrationResult(false, completedSteps, warnings, autorestResult.Error);
+            }
+
+            // Step 5.7: Replace _serializedAdditionalRawData with _serializedAdditionalBinaryData
+            Console.WriteLine("Step 5.7: Replacing _serializedAdditionalRawData with _serializedAdditionalBinaryData...");
+            var rawDataResult = await ReplaceSerializedAdditionalRawDataAsync();
+            if (rawDataResult.Success)
+            {
+                completedSteps.Add($"Replaced _serializedAdditionalRawData with _serializedAdditionalBinaryData ({rawDataResult.FilesChanged} files)");
+            }
+            else if (rawDataResult.Warning != null)
+            {
+                warnings.Add(rawDataResult.Warning);
+            }
+            else
+            {
+                return new MigrationResult(false, completedSteps, warnings, rawDataResult.Error);
+            }
+
             // Step 6: Run code generation and fix build errors
             Console.WriteLine("Step 6: Running code generation...");
             if (_dryRun)
@@ -723,6 +771,118 @@ public partial class MigrationService
         return new StepResult(true, null, null, filesChanged);
     }
 
+    private async Task<StepResult> ReplacePipelineFieldAsync()
+    {
+        var srcPath = Path.Combine(_projectPath, "src");
+        var searchPath = Directory.Exists(srcPath) ? srcPath : _projectPath;
+        
+        var csFiles = Directory.GetFiles(searchPath, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "Generated" + Path.DirectorySeparatorChar))
+            .ToList();
+
+        var filesChanged = 0;
+        foreach (var csFile in csFiles)
+        {
+            var content = await File.ReadAllTextAsync(csFile);
+            var originalContent = content;
+
+            // Replace _pipeline with Pipeline
+            content = PipelineFieldRegex().Replace(content, "Pipeline");
+
+            if (content != originalContent)
+            {
+                if (!_dryRun)
+                {
+                    await File.WriteAllTextAsync(csFile, content);
+                }
+                filesChanged++;
+                Log($"Replaced _pipeline in {Path.GetFileName(csFile)}");
+            }
+        }
+
+        if (filesChanged == 0)
+        {
+            return new StepResult(true, "No files contained _pipeline", null, 0);
+        }
+
+        return new StepResult(true, null, null, filesChanged);
+    }
+
+    private async Task<StepResult> RemoveAutorestCSharpCoreUsingAsync()
+    {
+        var srcPath = Path.Combine(_projectPath, "src");
+        var searchPath = Directory.Exists(srcPath) ? srcPath : _projectPath;
+        
+        var csFiles = Directory.GetFiles(searchPath, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "Generated" + Path.DirectorySeparatorChar))
+            .ToList();
+
+        var filesChanged = 0;
+        foreach (var csFile in csFiles)
+        {
+            var content = await File.ReadAllTextAsync(csFile);
+            var originalContent = content;
+
+            // Remove using Autorest.CSharp.Core;
+            content = AutorestCSharpCoreUsingRegex().Replace(content, "");
+
+            if (content != originalContent)
+            {
+                if (!_dryRun)
+                {
+                    await File.WriteAllTextAsync(csFile, content);
+                }
+                filesChanged++;
+                Log($"Removed Autorest.CSharp.Core using in {Path.GetFileName(csFile)}");
+            }
+        }
+
+        if (filesChanged == 0)
+        {
+            return new StepResult(true, "No files contained Autorest.CSharp.Core using", null, 0);
+        }
+
+        return new StepResult(true, null, null, filesChanged);
+    }
+
+    private async Task<StepResult> ReplaceSerializedAdditionalRawDataAsync()
+    {
+        var srcPath = Path.Combine(_projectPath, "src");
+        var searchPath = Directory.Exists(srcPath) ? srcPath : _projectPath;
+        
+        var csFiles = Directory.GetFiles(searchPath, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "Generated" + Path.DirectorySeparatorChar))
+            .ToList();
+
+        var filesChanged = 0;
+        foreach (var csFile in csFiles)
+        {
+            var content = await File.ReadAllTextAsync(csFile);
+            var originalContent = content;
+
+            // Replace _serializedAdditionalRawData and serializedAdditionalRawData with binary variant
+            content = SerializedAdditionalRawDataRegex().Replace(content, match =>
+                match.Value.StartsWith("_") ? "_serializedAdditionalBinaryData" : "serializedAdditionalBinaryData");
+
+            if (content != originalContent)
+            {
+                if (!_dryRun)
+                {
+                    await File.WriteAllTextAsync(csFile, content);
+                }
+                filesChanged++;
+                Log($"Replaced serializedAdditionalRawData in {Path.GetFileName(csFile)}");
+            }
+        }
+
+        if (filesChanged == 0)
+        {
+            return new StepResult(true, "No files contained serializedAdditionalRawData", null, 0);
+        }
+
+        return new StepResult(true, null, null, filesChanged);
+    }
+
     private void Log(string message)
     {
         if (_verbose)
@@ -754,6 +914,15 @@ public partial class MigrationService
 
     [GeneratedRegex(@"\bCodeGenModel\b")]
     private static partial Regex CodeGenModelRegex();
+
+    [GeneratedRegex(@"\b_pipeline\b")]
+    private static partial Regex PipelineFieldRegex();
+
+    [GeneratedRegex(@"^\s*using\s+Autorest\.CSharp\.Core\s*;\s*\r?\n?", RegexOptions.Multiline)]
+    private static partial Regex AutorestCSharpCoreUsingRegex();
+
+    [GeneratedRegex(@"\b_?serializedAdditionalRawData\b")]
+    private static partial Regex SerializedAdditionalRawDataRegex();
 }
 
 public record MigrationResult(
