@@ -75,6 +75,7 @@ public class CopilotService : IAsyncDisposable
                - Input models now have an implicit cast to RequestContent
                - Replace `foo.ToRequestContent()` with just `foo`
                - Example: `using RequestContent content = details.ToRequestContent();` becomes `using RequestContent content = details;`
+               - IMPORTANT: do not remove the using statement - only remove the ToRequestContent() call
 
             3. FromCancellationToken replacement:
                - Replace `RequestContext context = FromCancellationToken(cancellationToken);`

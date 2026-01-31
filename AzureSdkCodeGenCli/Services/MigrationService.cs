@@ -862,7 +862,7 @@ public partial class MigrationService
 
             // Replace _serializedAdditionalRawData and serializedAdditionalRawData with binary variant
             content = SerializedAdditionalRawDataRegex().Replace(content, match =>
-                match.Value.StartsWith("_") ? "_serializedAdditionalBinaryData" : "serializedAdditionalBinaryData");
+                match.Value.StartsWith("_") ? "_additionalBinaryDataProperties" : "additionalBinaryDataProperties");
 
             if (content != originalContent)
             {

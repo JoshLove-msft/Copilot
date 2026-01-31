@@ -121,9 +121,12 @@ public class FixOrchestrator
             {
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✅ Build succeeded after {attempt} attempt(s)!");
+                Console.WriteLine($"✅ Source build succeeded after {attempt} attempt(s)!");
                 Console.ResetColor();
-                return new OrchestratorResult(true, attempt, attempts);
+                
+                // Now build the full solution (parent directory) to verify tests compile
+                var solutionBuildResult = await BuildSolutionAsync(attempt, attempts);
+                return solutionBuildResult;
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -159,6 +162,116 @@ public class FixOrchestrator
         Console.ResetColor();
 
         return new OrchestratorResult(false, _maxRetries, attempts);
+    }
+
+    private async Task<OrchestratorResult> BuildSolutionAsync(int srcAttempts, List<AttemptResult> attempts)
+    {
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Blue;
+        Console.WriteLine("📦 Building full solution (including tests)...");
+        Console.ResetColor();
+
+        var solutionResult = await _buildRunner.RunSolutionBuildAsync(_projectPath, _verbose);
+
+        if (solutionResult.Success)
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"✅ Full solution build succeeded!");
+            Console.ResetColor();
+            return new OrchestratorResult(true, srcAttempts, attempts);
+        }
+
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"⚠️  Solution build has {solutionResult.Errors.Count} error(s) (likely in tests).");
+        Console.ResetColor();
+
+        // Show first few errors
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Errors:");
+        foreach (var error in solutionResult.Errors.Take(5))
+        {
+            Console.WriteLine($"  • {error.FilePath}({error.Line}): {error.Message}");
+        }
+        if (solutionResult.Errors.Count > 5)
+        {
+            Console.WriteLine($"  ... and {solutionResult.Errors.Count - 5} more");
+        }
+        Console.ResetColor();
+
+        // Initialize Copilot for test fixes (use parent directory as project path)
+        Console.WriteLine();
+        Console.WriteLine("Initializing Copilot to fix test/solution errors...");
+        await using var copilot = new CopilotService(_projectPath);
+        await copilot.InitializeAsync();
+
+        var currentErrors = solutionResult.Errors;
+        var currentOutput = solutionResult.RawOutput;
+
+        for (var attempt = 1; attempt <= _maxRetries; attempt++)
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine($"════════════════════════════════════════");
+            Console.WriteLine($"  Solution Fix Attempt {attempt}/{_maxRetries} - {currentErrors.Count} error(s)");
+            Console.WriteLine($"════════════════════════════════════════");
+            Console.ResetColor();
+            Console.WriteLine();
+
+            // Request fix from Copilot
+            Console.WriteLine("Copilot is analyzing and fixing errors...");
+            Console.WriteLine();
+            var response = await copilot.RequestFixAsync(currentErrors, currentOutput);
+
+            // Rebuild solution to check if fixes worked
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine("📦 Rebuilding solution to verify fixes...");
+            Console.ResetColor();
+            var rebuildResult = await _buildRunner.RunSolutionBuildAsync(_projectPath, _verbose);
+
+            var attemptResult = new AttemptResult(
+                srcAttempts + attempt,
+                currentErrors.ToList(),
+                rebuildResult.Errors.ToList(),
+                response
+            );
+            attempts.Add(attemptResult);
+
+            if (rebuildResult.Success)
+            {
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"✅ Full solution build succeeded after {attempt} solution fix attempt(s)!");
+                Console.ResetColor();
+                return new OrchestratorResult(true, srcAttempts + attempt, attempts);
+            }
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"⚠️  Solution build still has {rebuildResult.Errors.Count} error(s).");
+            Console.ResetColor();
+
+            // Check if we made progress
+            if (rebuildResult.Errors.Count < currentErrors.Count)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"   📉 Progress: Reduced errors from {currentErrors.Count} to {rebuildResult.Errors.Count}");
+                Console.ResetColor();
+            }
+
+            currentErrors = rebuildResult.Errors;
+            currentOutput = rebuildResult.RawOutput;
+        }
+
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"❌ Failed to fix all solution errors after {_maxRetries} attempts.");
+        Console.WriteLine($"   Remaining errors: {currentErrors.Count}");
+        Console.ResetColor();
+
+        return new OrchestratorResult(false, srcAttempts + _maxRetries, attempts);
     }
 }
 

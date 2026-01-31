@@ -81,11 +81,22 @@ public partial class BuildRunner
             srcPath = projectPath;
         }
 
+        return await RunBuildInDirectoryAsync(srcPath, verbose);
+    }
+
+    public async Task<BuildResult> RunSolutionBuildAsync(string projectPath, bool verbose = false)
+    {
+        // Build from the project root (parent of src) to include tests
+        return await RunBuildInDirectoryAsync(projectPath, verbose);
+    }
+
+    private async Task<BuildResult> RunBuildInDirectoryAsync(string directory, bool verbose = false)
+    {
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
             Arguments = "build",
-            WorkingDirectory = srcPath,
+            WorkingDirectory = directory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
