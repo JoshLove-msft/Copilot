@@ -98,14 +98,14 @@ public class FixOrchestrator
             // Regenerate code after fixes
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("🔄 Regenerating code after fixes...");
+            Console.WriteLine("[REGEN] Regenerating code after fixes...");
             Console.ResetColor();
             var regenerateResult = await _buildRunner.RunGenerateCodeAsync(_projectPath, _verbose);
 
             // Then rebuild to check if fixes worked
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("📦 Rebuilding to verify fixes...");
+            Console.WriteLine("[BUILD] Rebuilding to verify fixes...");
             Console.ResetColor();
             var rebuildResult = await _buildRunner.RunBuildAsync(_projectPath, _verbose);
 
@@ -121,7 +121,7 @@ public class FixOrchestrator
             {
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✅ Source build succeeded after {attempt} attempt(s)!");
+                Console.WriteLine($"[OK] Source build succeeded after {attempt} attempt(s)!");
                 Console.ResetColor();
                 
                 // Now build the full solution (parent directory) to verify tests compile
@@ -130,7 +130,7 @@ public class FixOrchestrator
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"⚠️  Build still has {rebuildResult.Errors.Count} error(s).");
+            Console.WriteLine($"[WARN] Build still has {rebuildResult.Errors.Count} error(s).");
             Console.ResetColor();
 
             // Check if we made progress
@@ -147,7 +147,7 @@ public class FixOrchestrator
             else
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"   📉 Progress: Reduced errors from {currentErrors.Count} to {rebuildResult.Errors.Count}");
+                Console.WriteLine($"   [PROGRESS] Reduced errors from {currentErrors.Count} to {rebuildResult.Errors.Count}");
                 Console.ResetColor();
             }
 
@@ -157,7 +157,7 @@ public class FixOrchestrator
 
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"❌ Failed to fix all errors after {_maxRetries} attempts.");
+        Console.WriteLine($"[FAIL] Failed to fix all errors after {_maxRetries} attempts.");
         Console.WriteLine($"   Remaining errors: {currentErrors.Count}");
         Console.ResetColor();
 
@@ -168,7 +168,7 @@ public class FixOrchestrator
     {
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Blue;
-        Console.WriteLine("📦 Building full solution (including tests)...");
+        Console.WriteLine("[BUILD] Building full solution (including tests)...");
         Console.ResetColor();
 
         var solutionResult = await _buildRunner.RunSolutionBuildAsync(_projectPath, _verbose);
@@ -177,14 +177,14 @@ public class FixOrchestrator
         {
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✅ Full solution build succeeded!");
+            Console.WriteLine($"[OK] Full solution build succeeded!");
             Console.ResetColor();
             return new OrchestratorResult(true, srcAttempts, attempts);
         }
 
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"⚠️  Solution build has {solutionResult.Errors.Count} error(s) (likely in tests).");
+        Console.WriteLine($"[WARN] Solution build has {solutionResult.Errors.Count} error(s) (likely in tests).");
         Console.ResetColor();
 
         // Show first few errors
@@ -228,7 +228,7 @@ public class FixOrchestrator
             // Rebuild solution to check if fixes worked
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("📦 Rebuilding solution to verify fixes...");
+            Console.WriteLine("[BUILD] Rebuilding solution to verify fixes...");
             Console.ResetColor();
             var rebuildResult = await _buildRunner.RunSolutionBuildAsync(_projectPath, _verbose);
 
@@ -244,20 +244,20 @@ public class FixOrchestrator
             {
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✅ Full solution build succeeded after {attempt} solution fix attempt(s)!");
+                Console.WriteLine($"[OK] Full solution build succeeded after {attempt} solution fix attempt(s)!");
                 Console.ResetColor();
                 return new OrchestratorResult(true, srcAttempts + attempt, attempts);
             }
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"⚠️  Solution build still has {rebuildResult.Errors.Count} error(s).");
+            Console.WriteLine($"[WARN] Solution build still has {rebuildResult.Errors.Count} error(s).");
             Console.ResetColor();
 
             // Check if we made progress
             if (rebuildResult.Errors.Count < currentErrors.Count)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"   📉 Progress: Reduced errors from {currentErrors.Count} to {rebuildResult.Errors.Count}");
+                Console.WriteLine($"   [PROGRESS] Reduced errors from {currentErrors.Count} to {rebuildResult.Errors.Count}");
                 Console.ResetColor();
             }
 
@@ -267,7 +267,7 @@ public class FixOrchestrator
 
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"❌ Failed to fix all solution errors after {_maxRetries} attempts.");
+        Console.WriteLine($"[FAIL] Failed to fix all solution errors after {_maxRetries} attempts.");
         Console.WriteLine($"   Remaining errors: {currentErrors.Count}");
         Console.ResetColor();
 

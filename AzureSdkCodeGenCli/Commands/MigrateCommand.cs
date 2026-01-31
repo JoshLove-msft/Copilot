@@ -73,7 +73,7 @@ public static class MigrateCommand
             Console.WriteLine("Completed steps:");
             foreach (var step in result.CompletedSteps)
             {
-                Console.WriteLine($"  ✓ {step}");
+                Console.WriteLine($"  [OK] {step}");
             }
         }
 
@@ -84,7 +84,7 @@ public static class MigrateCommand
             Console.WriteLine("Warnings:");
             foreach (var warning in result.Warnings)
             {
-                Console.WriteLine($"  ⚠ {warning}");
+                Console.WriteLine($"  [WARN] {warning}");
             }
             Console.ResetColor();
         }

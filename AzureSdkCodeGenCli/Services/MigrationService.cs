@@ -173,7 +173,7 @@ public partial class MigrationService
             }
             else
             {
-                var orchestrator = new FixOrchestrator(_projectPath, maxRetries: 5, verbose: _verbose);
+                var orchestrator = new FixOrchestrator(_projectPath, maxRetries: 10, verbose: _verbose);
                 var generateResult = await orchestrator.RunAsync();
                 
                 if (generateResult.Success)
@@ -329,7 +329,7 @@ public partial class MigrationService
                 // Path doesn't exist - use Copilot to find the new location
                 Log($"Path '{directory}' not found on main branch");
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"   ⚠ Spec path '{directory}' not found in repo.");
+                Console.WriteLine($"   [WARN] Spec path '{directory}' not found in repo.");
                 Console.WriteLine($"   Using Copilot to find the correct path...");
                 Console.ResetColor();
 
@@ -359,8 +359,8 @@ public partial class MigrationService
                     await File.WriteAllTextAsync(tspLocationPath, content);
 
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"   ✓ Found new path: {newPath}");
-                    Console.WriteLine($"   ✓ Updated commit: {newSha[..8]}...");
+                    Console.WriteLine($"   [OK] Found new path: {newPath}");
+                    Console.WriteLine($"   [OK] Updated commit: {newSha[..8]}...");
                     Console.ResetColor();
 
                     return new StepResult(true, null, null, 1);
@@ -513,7 +513,7 @@ public partial class MigrationService
                         if (!_quiet)
                         {
                             Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"   🔧 {toolStart.Data.ToolName}");
+                            Console.WriteLine($"   [TOOL] {toolStart.Data.ToolName}");
                             Console.ResetColor();
                         }
                         break;
@@ -686,19 +686,11 @@ public partial class MigrationService
             var content = await File.ReadAllTextAsync(csFile);
             var originalContent = content;
 
-            // Replace old namespace with new namespace
-            // Common old namespaces: Azure.Core.Codegen, Azure.CodeGen
-            content = content.Replace("using Azure.Core;", "using Azure.Core;\nusing Microsoft.TypeSpec.Generator.Customizations;");
+            // Only add the namespace if the file has uncommented CodeGen attributes and doesn't already have the using
+            var hasUncommentedCodeGen = content.Split('\n')
+                .Any(line => line.Contains("[CodeGen") && !line.TrimStart().StartsWith("//"));
             
-            // Remove duplicate usings if we added one that already exists
-            if (content.Contains("using Microsoft.TypeSpec.Generator.Customizations;") && 
-                originalContent.Contains("using Microsoft.TypeSpec.Generator.Customizations;"))
-            {
-                content = originalContent; // revert, already has the using
-            }
-
-            // Check for CodeGen attributes that need the namespace
-            if (content.Contains("[CodeGen") && !content.Contains("Microsoft.TypeSpec.Generator.Customizations"))
+            if (hasUncommentedCodeGen && !content.Contains("using Microsoft.TypeSpec.Generator.Customizations;"))
             {
                 // Add the using statement after the last using
                 var lastUsingIndex = content.LastIndexOf("using ");

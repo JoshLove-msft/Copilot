@@ -136,12 +136,12 @@ public class CopilotService : IAsyncDisposable
                     break;
                 case ToolExecutionStartEvent toolStart:
                     Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"\n🔧 Using tool: {toolStart.Data.ToolName}");
+                    Console.WriteLine($"\n[TOOL] Using: {toolStart.Data.ToolName}");
                     Console.ResetColor();
                     break;
                 case ToolExecutionCompleteEvent toolComplete:
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"   ✓ Tool completed");
+                    Console.WriteLine($"   [OK] Tool completed");
                     Console.ResetColor();
                     break;
                 case SessionIdleEvent:
@@ -150,7 +150,7 @@ public class CopilotService : IAsyncDisposable
                     break;
                 case SessionErrorEvent err:
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"\n❌ Error: {err.Data.Message}");
+                    Console.WriteLine($"\n[ERROR] {err.Data.Message}");
                     Console.ResetColor();
                     subscription?.Dispose();
                     done.TrySetException(new Exception(err.Data.Message));

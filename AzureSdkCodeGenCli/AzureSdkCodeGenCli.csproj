@@ -10,7 +10,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>azsdkgen</ToolCommandName>
     <PackageId>AzureSdkCodeGenCli</PackageId>
-    <Version>1.1.4</Version>
+    <Version>1.1.7</Version>
     <Authors>Your Name</Authors>
     <Description>Azure SDK Code Generation CLI with Copilot-powered build fix assistance</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
