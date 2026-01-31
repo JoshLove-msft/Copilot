@@ -50,7 +50,10 @@ public class CopilotService : IAsyncDisposable
             CRITICAL RULES - YOU MUST FOLLOW THESE:
             1. NEVER modify, edit, or create files under any "Generated" folder or path containing "Generated".
             2. If an error is in a Generated file, you must fix it by creating/editing a CUSTOMIZATION file instead.
-            3. Common fix patterns for Generated file errors:
+            3. Do not expect all errors to be fixed simply by modifying custom files - you will need to regenerate code after making fixes. You 
+               are being run in a loop where after you make fixes, code generation will be re-run. When you are finished fixing errors, and require
+               a regeneration, end your current fix iteration.
+            4. Common fix patterns for Generated file errors:
                - Create a partial class in the non-Generated folder to extend the generated type
                - Add missing interface implementations in customization files
                - Create wrapper methods or extension methods
@@ -64,7 +67,7 @@ public class CopilotService : IAsyncDisposable
                  a. The custom method is likely suppressing generation of the internal method that would create the CollectionResult
                  b. Find the [CodeGenSuppress] attribute that suppresses the generated method
                  c. Comment out or remove that attribute
-                 d. re-run code generation to generate the CollectionResult type
+                 d. re-run code generation to generate the CollectionResult type (in order to regenerate end your current build fix iteration)
                  e. After regeneration, the CollectionResult type will exist and can be used
                - Do NOT try to create the CollectionResult type manually - it must be generated
 
